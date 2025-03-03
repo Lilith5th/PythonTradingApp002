@@ -1,6 +1,7 @@
 #config.py
 
 from dataclasses import dataclass, field
+from typing import List
 
 @dataclass
 class CSVConfig:
@@ -179,6 +180,27 @@ class PredictionAdvancedConfig:
     # Validation metrics
     validation_metrics: list = field(default_factory=lambda: ["rmse", "mae", "mape", "smape", "directional_accuracy"])
 
+
+
+@dataclass
+class StrategyConfig:
+    """Configuration class for trading strategies."""
+    strategy_type: str = "buy_and_hold"  # Default strategy
+    enable_ml_optimization: bool = False
+    initial_capital: float = 10000.0
+    position_size_pct: float = 10.0      # Percentage of capital to invest per trade
+    take_profit_pct: float = 5.0         # Take profit percentage
+    stop_loss_pct: float = 3.0           # Stop loss percentage
+    trailing_stop_pct: float = 2.0       # Trailing stop percentage
+    max_positions: int = 5               # Maximum number of open positions
+    reinvest_profits: bool = True        # Whether to reinvest profits
+    use_saved_ml_model: bool = False     # Whether to use a previously saved ML model
+    ml_model_path: str = "strategy_ml_model.pkl"  # Path to saved ML model
+    ml_features: List[str] = field(default_factory=lambda: ["price_momentum", "rsi", "macd", "volume_change"])
+    backtest_period: int = 252           # Number of days to backtest (approximately 1 year)
+    optimization_metric: str = "sharpe_ratio"  # Metric to optimize for
+
+
 @dataclass
 class AppConfig:
     csv: CSVConfig = field(default_factory=CSVConfig)
@@ -191,3 +213,4 @@ class AppConfig:
     tf_config: TensorFlowConfig = field(default_factory=TensorFlowConfig)
     feature_selection: FeatureSelectionConfig = field(default_factory=FeatureSelectionConfig)
     rolling_window: RollingWindowConfig = field(default_factory=RollingWindowConfig)  # New rolling window config
+    strategy: StrategyConfig = field(default_factory=StrategyConfig)

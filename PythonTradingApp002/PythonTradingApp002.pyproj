@@ -64,6 +64,8 @@
     <Compile Include="stock_predictor\plotter.py" />
     <Compile Include="stock_predictor\plot_gui.py" />
     <Compile Include="stock_predictor\rolling_window_forecaster.py" />
+    <Compile Include="stock_predictor\strategy_gui_integration.py" />
+    <Compile Include="stock_predictor\strategy_implementation.py" />
     <Compile Include="validation\visualization.py" />
     <Compile Include="stock_predictor\__init__.py" />
     <Compile Include="validation\__init__.py" />

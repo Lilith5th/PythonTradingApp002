@@ -19,7 +19,7 @@ from stock_predictor.config import AppConfig
 
 # Import necessary modules for GUI tabs
 from stock_predictor.gui import preferences_tab, learning_tab, prediction_tab
-from stock_predictor.gui import plot_tab, features_tab, rolling_window_tab, advanced_prediction_tab
+from stock_predictor.gui import plot_tab, features_tab, rolling_window_tab, advanced_prediction_tab, strategy_tab
 
 matplotlib.use('TkAgg')
 
@@ -95,7 +95,8 @@ def update_config_from_gui(entries, app_config):
             "plot": app_config.plot,
             "features": app_config.feature_selection,
             "rolling_window": app_config.rolling_window,
-            "advanced_prediction": app_config.prediction_advanced
+            "advanced_prediction": app_config.prediction_advanced,
+            "strategy": app_config.strategy
         }.items():
             if section not in entries:
                 logging.warning(f"Section {section} not found in entries")
@@ -334,7 +335,7 @@ def create_gui(app_config):
     notebook.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
     
     # Create frames in desired order:
-    # Preferences, Learning, Features, Rolling Window, Prediction, Plot, Advanced Prediction
+    # Preferences, Learning, Features, Rolling Window, Prediction, Plot, Advanced Prediction, Strategy
     frames = {
         "preferences": ttk.Frame(notebook),
         "learning": ttk.Frame(notebook),
@@ -342,7 +343,8 @@ def create_gui(app_config):
         "rolling_window": ttk.Frame(notebook),
         "prediction": ttk.Frame(notebook),
         "plot": ttk.Frame(notebook),
-        "advanced_prediction": ttk.Frame(notebook)
+        "advanced_prediction": ttk.Frame(notebook),
+        "strategy": ttk.Frame(notebook)  # Added strategy tab
     }
     
     for key, frame in frames.items():
@@ -358,6 +360,7 @@ def create_gui(app_config):
     entries["prediction"] = prediction_tab.create_tab(frames["prediction"], app_config.prediction)
     entries["plot"] = plot_tab.create_tab(frames["plot"], app_config.plot)
     entries["advanced_prediction"] = advanced_prediction_tab.create_tab(frames["advanced_prediction"], app_config.prediction_advanced)
+    entries["strategy"] = strategy_tab.create_tab(frames["strategy"], app_config.strategy)  # Added strategy tab creation
     
     # Set up event handlers for tab interactions
     learning_tab.setup_events(entries["learning"], notebook)
@@ -536,6 +539,31 @@ def create_gui(app_config):
                     btn_backtest.config(state="normal")
             threading.Thread(target=backtest_callback, daemon=True).start()
 
+    # Add strategy button functions
+    def run_strategy_backtest():
+        """Run strategy backtest"""
+        if update_config_from_gui(entries, app_config):
+            # Import the strategy GUI functions
+            from stock_predictor.strategy_gui_integration import run_strategy_backtest
+            # Run the backtest
+            run_strategy_backtest(app_config, data_handler)
+
+    def run_strategy_comparison():
+        """Run strategy comparison"""
+        if update_config_from_gui(entries, app_config):
+            # Import the strategy GUI functions
+            from stock_predictor.strategy_gui_integration import run_strategy_comparison
+            # Run the comparison
+            run_strategy_comparison(app_config, data_handler)
+
+    def run_ml_optimization():
+        """Run ML strategy optimization"""
+        if update_config_from_gui(entries, app_config):
+            # Import the strategy GUI functions
+            from stock_predictor.strategy_gui_integration import run_ml_optimization
+            # Run the optimization
+            run_ml_optimization(app_config, data_handler)
+
     def on_closing():
         root.quit()
         root.destroy()
@@ -545,7 +573,7 @@ def create_gui(app_config):
     button_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
     button_frame.grid_propagate(False)
     button_frame.configure(height=40)
-    button_count = 6  # Total number of buttons
+    button_count = 9  # Total number of buttons (including new strategy buttons)
     for i in range(button_count):
         button_frame.grid_columnconfigure(i, weight=1)
     btn_width = 18
@@ -560,8 +588,19 @@ def create_gui(app_config):
     btn_compare.grid(row=0, column=3, padx=3, pady=5)
     btn_backtest = ttk.Button(button_frame, text="Run Backtesting", width=btn_width, command=run_backtesting)
     btn_backtest.grid(row=0, column=4, padx=3, pady=5)
+    
+    # Add strategy buttons
+    btn_strategy = ttk.Button(button_frame, text="Run Strategy Backtest", width=btn_width, command=run_strategy_backtest)
+    btn_strategy.grid(row=0, column=5, padx=3, pady=5)
+    
+    btn_compare_strat = ttk.Button(button_frame, text="Compare Strategies", width=btn_width, command=run_strategy_comparison)
+    btn_compare_strat.grid(row=0, column=6, padx=3, pady=5)
+    
+    btn_ml = ttk.Button(button_frame, text="ML Optimization", width=btn_width, command=run_ml_optimization)
+    btn_ml.grid(row=0, column=7, padx=3, pady=5)
+    
     btn_close = ttk.Button(button_frame, text="Close", width=btn_width//2, command=on_closing)
-    btn_close.grid(row=0, column=5, padx=3, pady=5)
+    btn_close.grid(row=0, column=8, padx=3, pady=5)
     
     status_var = tk.StringVar(value="Ready")
     status_bar = ttk.Label(root, textvariable=status_var, relief=tk.SUNKEN, anchor=tk.W)
@@ -601,6 +640,10 @@ def plot_rolling_window_performance(app_config, diagnostics, plt=plt, np=np):
     plt.figtext(0.5, 0.01, stats_text, ha='center', fontsize=10, bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 5})
     plt.tight_layout(rect=[0, 0.05, 1, 0.95])
     return fig
+
+
+
+
 
 def main():
     try:
