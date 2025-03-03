@@ -116,6 +116,10 @@ def create_basic_settings(parent, config_obj, entry_dict):
         "ml_optimized": "Uses machine learning to optimize trading parameters based on historical data."
     }
     
+    # Initialize ml_enable_var first to avoid NoneType error
+    global ml_enable_var
+    ml_enable_var = tk.BooleanVar(value=False)
+    
     # Update description when strategy changes
     def update_description(*args):
         selected = strategy_var.get()

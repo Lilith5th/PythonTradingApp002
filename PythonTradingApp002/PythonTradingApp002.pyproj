@@ -59,6 +59,7 @@
     <Compile Include="stock_predictor\gui\preferences_tab.py" />
     <Compile Include="stock_predictor\gui\rolling_window_tab.py" />
     <Compile Include="stock_predictor\gui\strategy_tab.py" />
+    <Compile Include="stock_predictor\thread_safe_gui.py" />
     <Compile Include="stock_predictor\gui\__init__.py" />
     <Compile Include="stock_predictor\model.py" />
     <Compile Include="stock_predictor\plotter.py" />

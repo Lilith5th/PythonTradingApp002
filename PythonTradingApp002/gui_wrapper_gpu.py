@@ -159,17 +159,29 @@ def update_section_config(entries, config_obj):
                     setattr(config_obj, f.name, value.get())
             else:
                 try:
-                    widget_value = value.get()
-                    if isinstance(current_val, bool):
-                        setattr(config_obj, f.name, parse_bool_str(widget_value))
-                    elif isinstance(current_val, int):
-                        setattr(config_obj, f.name, int(widget_value))
-                    elif isinstance(current_val, float):
-                        setattr(config_obj, f.name, float(widget_value))
-                    else:
-                        setattr(config_obj, f.name, widget_value)
-                except AttributeError:
-                    logging.warning(f"Could not get value for {f.name}")
+                    # Check if the value has a get method that requires no arguments
+                    if hasattr(value, 'get') and callable(value.get):
+                        # Inspect the method signature
+                        import inspect
+                        sig = inspect.signature(value.get)
+                        # Check if all parameters have default values (optional)
+                        required_params = [p for p in sig.parameters.values() 
+                                           if p.default is inspect.Parameter.empty and 
+                                           p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)]
+                        
+                        # If there are no required parameters, we can call get()
+                        if not required_params or len(required_params) == 0:
+                            widget_value = value.get()
+                            if isinstance(current_val, bool):
+                                setattr(config_obj, f.name, parse_bool_str(widget_value))
+                            elif isinstance(current_val, int):
+                                setattr(config_obj, f.name, int(widget_value))
+                            elif isinstance(current_val, float):
+                                setattr(config_obj, f.name, float(widget_value))
+                            else:
+                                setattr(config_obj, f.name, widget_value)
+                except Exception as e:
+                    logging.warning(f"Could not get value for {f.name}: {e}")
 
 def run_forecast_in_subprocess(app_config, output_file_path, device):
     import os
@@ -324,6 +336,10 @@ def create_gui(app_config):
     root.title("Dynamic Forecast Configuration (GPU)")
     root.geometry("900x650")
     
+    # Create data handler instance
+    from stock_predictor.data_handler import DataHandler
+    data_handler = DataHandler(app_config)
+    
     # Configure grid layout
     root.grid_rowconfigure(0, weight=1)
     root.grid_rowconfigure(1, weight=0)
@@ -402,7 +418,8 @@ def create_gui(app_config):
                 status_var.set("Forecast failed")
             else:
                 status_var.set("Forecast complete - Displaying results")
-                plot_gui.create_plot_gui_with_data(app_config, data[:-1])
+                # Use after to ensure this runs in the main thread
+                root.after(10, lambda: plot_gui.create_plot_gui_with_data(app_config, data[:-1]))
         else:
             messagebox.showerror("Error", "Forecast simulation failed.")
             status_var.set("Forecast failed")
@@ -540,7 +557,7 @@ def create_gui(app_config):
             threading.Thread(target=backtest_callback, daemon=True).start()
 
     # Add strategy button functions
-    def run_strategy_backtest():
+    def handle_strategy_backtest():
         """Run strategy backtest"""
         if update_config_from_gui(entries, app_config):
             # Import the strategy GUI functions
@@ -548,7 +565,7 @@ def create_gui(app_config):
             # Run the backtest
             run_strategy_backtest(app_config, data_handler)
 
-    def run_strategy_comparison():
+    def handle_strategy_comparison():
         """Run strategy comparison"""
         if update_config_from_gui(entries, app_config):
             # Import the strategy GUI functions
@@ -556,7 +573,7 @@ def create_gui(app_config):
             # Run the comparison
             run_strategy_comparison(app_config, data_handler)
 
-    def run_ml_optimization():
+    def handle_ml_optimization():
         """Run ML strategy optimization"""
         if update_config_from_gui(entries, app_config):
             # Import the strategy GUI functions
@@ -590,13 +607,13 @@ def create_gui(app_config):
     btn_backtest.grid(row=0, column=4, padx=3, pady=5)
     
     # Add strategy buttons
-    btn_strategy = ttk.Button(button_frame, text="Run Strategy Backtest", width=btn_width, command=run_strategy_backtest)
+    btn_strategy = ttk.Button(button_frame, text="Run Strategy Backtest", width=btn_width, command=handle_strategy_backtest)
     btn_strategy.grid(row=0, column=5, padx=3, pady=5)
     
-    btn_compare_strat = ttk.Button(button_frame, text="Compare Strategies", width=btn_width, command=run_strategy_comparison)
+    btn_compare_strat = ttk.Button(button_frame, text="Compare Strategies", width=btn_width, command=handle_strategy_comparison)
     btn_compare_strat.grid(row=0, column=6, padx=3, pady=5)
     
-    btn_ml = ttk.Button(button_frame, text="ML Optimization", width=btn_width, command=run_ml_optimization)
+    btn_ml = ttk.Button(button_frame, text="ML Optimization", width=btn_width, command=handle_ml_optimization)
     btn_ml.grid(row=0, column=7, padx=3, pady=5)
     
     btn_close = ttk.Button(button_frame, text="Close", width=btn_width//2, command=on_closing)
