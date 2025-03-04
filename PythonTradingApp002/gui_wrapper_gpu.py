@@ -336,6 +336,21 @@ def create_gui(app_config):
     root.title("Dynamic Forecast Configuration (GPU)")
     root.geometry("900x650")
     
+    from stock_predictor.thread_safe_gui import start_queue_processor, stop_queue_processor
+
+    # Start the queue processor
+    start_queue_processor()
+
+    # Make sure it stops when the app closes
+    def on_closing():
+        stop_queue_processor()
+        root.quit()
+        root.destroy()
+    
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+
+
+
     # Create data handler instance
     from stock_predictor.data_handler import DataHandler
     data_handler = DataHandler(app_config)
@@ -408,21 +423,28 @@ def create_gui(app_config):
     
     # Forecast execution functions
     def handle_forecast_result(exitcode, temp_file_path):
-        btn_run.config(state="normal")
+        from stock_predictor.thread_safe_gui import run_in_main_thread
+    
+        # Update GUI elements
+        run_in_main_thread(btn_run.config, state="normal")
+    
         if exitcode == 0 and os.path.exists(temp_file_path):
             with open(temp_file_path, 'rb') as f:
                 data = pickle.load(f)
             os.unlink(temp_file_path)
+        
             if isinstance(data, dict) and 'error' in data:
-                messagebox.showerror("Error", f"Forecast simulation failed: {data['error']}")
-                status_var.set("Forecast failed")
+                run_in_main_thread(messagebox.showerror, "Error", f"Forecast simulation failed: {data['error']}")
+                run_in_main_thread(status_var.set, "Forecast failed")
             else:
-                status_var.set("Forecast complete - Displaying results")
-                # Use after to ensure this runs in the main thread
-                root.after(10, lambda: plot_gui.create_plot_gui_with_data(app_config, data[:-1]))
+                run_in_main_thread(status_var.set, "Forecast complete - Displaying results")
+            
+                # Import at function level to avoid circular imports
+                from stock_predictor import plot_gui
+                run_in_main_thread(plot_gui.create_plot_gui_with_data, app_config, data[:-1])
         else:
-            messagebox.showerror("Error", "Forecast simulation failed.")
-            status_var.set("Forecast failed")
+            run_in_main_thread(messagebox.showerror, "Error", "Forecast simulation failed.")
+            run_in_main_thread(status_var.set, "Forecast failed")
             
     def on_run():
         if not update_config_from_gui(entries, app_config):
@@ -433,6 +455,7 @@ def create_gui(app_config):
             temp_file_path = temp_file.name
         devices = configure_device_resources(app_config, num_forecasts=1)
         device = devices[0]
+    
         def run_forecast():
             process = multiprocessing.Process(
                 target=run_forecast_in_subprocess,
@@ -440,7 +463,11 @@ def create_gui(app_config):
             )
             process.start()
             process.join()
-            root.after(0, lambda: handle_forecast_result(process.exitcode, temp_file_path))
+        
+            # Queue the result handling for the main thread
+            from stock_predictor.thread_safe_gui import run_in_main_thread
+            run_in_main_thread(handle_forecast_result, process.exitcode, temp_file_path)
+        
         threading.Thread(target=run_forecast, daemon=True).start()
 
     def run_parallel_scenarios():

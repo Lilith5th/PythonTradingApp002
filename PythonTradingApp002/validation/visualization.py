@@ -478,47 +478,41 @@ def create_rolling_window_plot_gui(app_config, diagnostics):
     def show_window_details(window_idx, window_data):
         detail_window = tk.Toplevel(root)
         detail_window.title(f"Window {window_idx+1} Details")
-        detail_window.geometry("800x600")
-        
-        # Add window data
+        detail_window.geometry("800x800")  # Increased height to accommodate new plot
+
+        # Add window data (existing code)
         ttk.Label(detail_window, text=f"Window {window_idx+1} Details", 
                  font=("Arial", 12, "bold")).pack(padx=10, pady=5)
-        
-        # Create basic info frame
+    
         info_frame = ttk.LabelFrame(detail_window, text="Window Information")
         info_frame.pack(fill="x", padx=10, pady=5)
-        
+    
         info_grid = ttk.Frame(info_frame)
         info_grid.pack(fill="x", padx=10, pady=5)
-        
-        # Window metadata
+    
         ttk.Label(info_grid, text="Start Index:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
         ttk.Label(info_grid, text=str(window_data['start_idx'])).grid(row=0, column=1, sticky="w", padx=5, pady=2)
-        
         ttk.Label(info_grid, text="End Index:").grid(row=0, column=2, sticky="w", padx=5, pady=2)
         ttk.Label(info_grid, text=str(window_data['end_idx'])).grid(row=0, column=3, sticky="w", padx=5, pady=2)
-        
         ttk.Label(info_grid, text="SMAPE:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
         ttk.Label(info_grid, text=f"{window_data['smape']:.2f}%").grid(row=1, column=1, sticky="w", padx=5, pady=2)
-        
-        # Calculate window rank
+    
         smape_values = [m['smape'] for m in metrics]
         rank = sorted(range(len(smape_values)), key=lambda k: smape_values[k]).index(window_idx) + 1
-        
         ttk.Label(info_grid, text="Rank:").grid(row=1, column=2, sticky="w", padx=5, pady=2)
         ttk.Label(info_grid, text=f"{rank} of {len(metrics)}").grid(row=1, column=3, sticky="w", padx=5, pady=2)
-        
+    
         # Check if we have prediction and actual data
         has_data = 'prediction' in window_data and 'actual' in window_data
-        
+    
         if has_data:
             pred = window_data['prediction']
             actual = window_data['actual']
-            
-            # Create visualization
-            fig = plt.Figure(figsize=(8, 6))
-            
-            # Prediction vs Actual
+        
+            # Create visualization frame with two subplots
+            fig = plt.Figure(figsize=(8, 8))  # Adjusted figure size
+        
+            # Existing Prediction vs Actual Plot (Top)
             ax1 = fig.add_subplot(211)
             ax1.plot(actual, 'k-', label='Actual')
             ax1.plot(pred, 'b-', label='Prediction')
@@ -527,23 +521,27 @@ def create_rolling_window_plot_gui(app_config, diagnostics):
             ax1.set_ylabel("Scaled Price")
             ax1.legend()
             ax1.grid(True)
-            
-            # Error over time
+        
+            # New Plot: Unscaled Price Comparison (Bottom)
             ax2 = fig.add_subplot(212)
-            if len(pred) == len(actual):
-                error = np.array(pred) - np.array(actual)
-                ax2.plot(error, 'r-')
-                ax2.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-                ax2.set_title("Prediction Error")
+            try:
+                # Assuming app_config and data_handler are accessible globally or passed somehow
+                from stock_predictor import forecast_module  # Import if needed
+                unscaled_pred = forecast_module.app_config.data_handler.stock_data.unscale_close_price(np.array(pred))
+                unscaled_actual = forecast_module.app_config.data_handler.stock_data.unscale_close_price(np.array(actual))
+                ax2.plot(unscaled_actual, 'k-', label='Actual Price')
+                ax2.plot(unscaled_pred, 'b-', label='Predicted Price')
+                ax2.set_title("Unscaled Price Comparison")
                 ax2.set_xlabel("Days")
-                ax2.set_ylabel("Error (Prediction - Actual)")
+                ax2.set_ylabel("Price")
+                ax2.legend()
                 ax2.grid(True)
-            else:
-                ax2.text(0.5, 0.5, "Error cannot be calculated (length mismatch)",
-                        ha='center', va='center', transform=ax2.transAxes)
-            
+            except Exception as e:
+                logging.error(f"Error plotting unscaled prices: {e}")
+                ax2.text(0.5, 0.5, "Error plotting unscaled prices", ha='center', va='center')
+        
             fig.tight_layout()
-            
+        
             # Display the figure
             canvas = FigureCanvasTkAgg(fig, master=detail_window)
             canvas.draw()

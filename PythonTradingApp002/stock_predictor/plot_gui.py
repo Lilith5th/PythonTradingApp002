@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import logging
 import traceback
 import threading
+from stock_predictor.thread_safe_gui import run_in_main_thread
 
 # Import for Plotly
 try:
