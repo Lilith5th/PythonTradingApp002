@@ -55,7 +55,6 @@
     <Compile Include="stock_predictor\gui\matplotlib_canvas.py" />
     <Compile Include="stock_predictor\gui\plot_tab.py" />
     <Compile Include="stock_predictor\gui\prediction_tab.py" />
-    <Compile Include="stock_predictor\gui\prediction_tabs.py" />
     <Compile Include="stock_predictor\gui\preferences_tab.py" />
     <Compile Include="stock_predictor\gui\rolling_window_tab.py" />
     <Compile Include="stock_predictor\gui\strategy_tab.py" />
