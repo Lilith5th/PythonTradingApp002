@@ -1,21 +1,17 @@
-"""
-Learning tab for the stock prediction GUI.
-Contains settings for learning parameters.
-"""
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 from dataclasses import fields
 import logging
 
-def create_tab(parent_frame, config_obj):
+def create_tab(parent_frame, config_obj, app_config=None):
     """
     Create the learning tab contents
     
     Args:
         parent_frame: The parent frame to add content to
         config_obj: The LearningConfig configuration object
-        
+        app_config: The full AppConfig object (optional, for synchronization)
+    
     Returns:
         Dictionary containing the GUI elements
     """
@@ -33,32 +29,53 @@ def create_tab(parent_frame, config_obj):
             widget.set(str(default_val))
             widget.pack(side="left", expand=True, fill="x")
             entry_dict[f.name] = widget
-        
         elif f.name == "auto_batch_size":
             var = tk.BooleanVar(value=default_val)
             widget = ttk.Checkbutton(row, text="Enable Auto Batch Size", variable=var)
             widget.pack(side="left")
             entry_dict[f.name] = var
-        
         elif f.name == "manual_batch_size":
             widget = ttk.Entry(row)
             widget.insert(0, str(default_val))
             widget.pack(side="left", expand=True, fill="x")
             manual_batch_size_widget = widget
             entry_dict[f.name] = widget
-        
         elif f.name == "use_features":
             var = tk.BooleanVar(value=default_val)
             widget = ttk.Checkbutton(row, text="Use Learning Features ", variable=var)
             widget.pack(side="left")
             entry_dict[f.name] = var
-            
+        elif f.name == "use_log_transformation":
+            var = tk.BooleanVar(value=default_val)
+            widget = ttk.Checkbutton(row, text="Use Logarithmic Price Transformation", variable=var)
+            widget.pack(side="left")
+            entry_dict[f.name] = var
+        elif f.name == "timestamp":
+            widget = ttk.Entry(row)
+            widget.insert(0, str(default_val))
+            widget.pack(side="left", expand=True, fill="x")
+            entry_dict[f.name] = widget
+            # Synchronize with initial_data_period in Prediction tab
+            if app_config is not None:
+                def update_initial_data_period(*args):
+                    try:
+                        timestamp_value = int(widget.get())
+                        app_config.learning.timestamp = timestamp_value
+                        app_config.prediction.initial_data_period = timestamp_value
+                        # Update Prediction tab if it exists
+                        if hasattr(parent_frame.winfo_toplevel(), 'entries') and 'prediction' in parent_frame.winfo_toplevel().entries:
+                            pred_entries = parent_frame.winfo_toplevel().entries['prediction']
+                            if 'initial_data_period' in pred_entries:
+                                pred_entries['initial_data_period'].delete(0, tk.END)
+                                pred_entries['initial_data_period'].insert(0, str(timestamp_value))
+                    except ValueError as e:
+                        logging.warning(f"Invalid timestamp value: {e}")
+                widget.bind("<FocusOut>", update_initial_data_period)
         elif f.type == bool:
             var = tk.BooleanVar(value=default_val)
             widget = ttk.Checkbutton(row, variable=var)
             widget.pack(side="left")
             entry_dict[f.name] = var
-        
         else:
             widget = ttk.Entry(row)
             widget.insert(0, str(default_val))
@@ -74,9 +91,30 @@ def create_tab(parent_frame, config_obj):
                 manual_batch_size_widget.config(state='normal')
         
         entry_dict["auto_batch_size"].trace_add('write', update_state)
-        # Initial state
         if entry_dict["auto_batch_size"].get():
             manual_batch_size_widget.config(state='disabled')
+    
+    # Add help info
+    help_frame = ttk.LabelFrame(parent_frame, text="Learning Settings Info")
+    help_frame.pack(fill="both", expand=True, padx=10, pady=10)
+    
+    help_text = """
+    preset: Predefined configuration preset
+    
+    auto_batch_size: Automatically determine batch size
+    
+    manual_batch_size: Manually set batch size (if auto_batch_size is off)
+    
+    use_features: Enable advanced feature engineering
+    
+    use_log_transformation: Apply logarithmic transformation to price data (helps with non-stationary time series)
+    
+    timestamp: Sequence length for training and prediction (must match initial_data_period in Prediction tab if set_initial_data is enabled)
+    
+    Other fields control model architecture and training parameters.
+    """
+    
+    ttk.Label(help_frame, text=help_text, wraplength=500, justify="left").pack(padx=10, pady=10)
     
     return entry_dict
 
@@ -110,7 +148,6 @@ def update_fields_for_preset(entries, preset):
         preset: Selected preset name
     """
     try:
-        # Import at the function level to avoid circular imports
         from stock_predictor import forecast_module
         
         if "preset" not in entries:

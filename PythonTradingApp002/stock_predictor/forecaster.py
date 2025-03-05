@@ -32,34 +32,41 @@ class Forecaster:
     def run_simulations(self):
         """Run all forecast simulations"""
         start_time = time.time()
-        
+    
         train_data = self.stock_data.get_training_array()
         features = self.stock_data.feature_list
-        
+    
         # Clear previous results
         self.forecast_results.simulation_predictions = []
         self.forecast_results.learning_curves = []
-        
+    
+        # Log whether we're using logarithmic transformation
+        log_transform_enabled = False
+        if hasattr(self.app_config.learning, 'use_log_transformation'):
+            log_transform_enabled = self.app_config.learning.use_log_transformation
+            if log_transform_enabled:
+                logging.info("Running forecast with logarithmic price transformation enabled")
+    
         # Run simulations
         for sim_index in range(1, self.app_config.learning.simulation_size + 1):
             logging.info(f"Starting simulation {sim_index}/{self.app_config.learning.simulation_size}")
             result = self.run_single_forecast(sim_index, train_data, features)
             self.forecast_results.simulation_predictions.append(result['predictions'])
-            
+        
             # Store diagnostics from first simulation
             if sim_index == 1:
                 self.forecast_results.learning_curves = result['diagnostics']['epoch_history']
                 self.forecast_results.final_model_loss = result['diagnostics']['final_loss']
-        
+    
         # Calculate feature importance
         self.forecast_results.feature_importance_scores = self.calculate_feature_importance(train_data, features)
         self.forecast_results.model_training_time = time.time() - start_time
-        
+    
         # Evaluate predictions
         self.forecast_results.evaluate_predictions(self.stock_data)
-        
+    
         logging.info(f"Learning phase completed in {self.forecast_results.model_training_time:.2f} seconds")
-        
+    
         return (
             self.forecast_results.simulation_predictions,
             [{'epoch_history': self.forecast_results.learning_curves, 'final_loss': self.forecast_results.final_model_loss}],

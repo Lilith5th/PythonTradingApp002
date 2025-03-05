@@ -36,14 +36,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="advanced\uncertainty.py" />
-    <Compile Include="advanced\ensamble.py" />
     <Compile Include="gui_cpu_starter.py" />
     <Compile Include="gui_wrapper_cpu.py" />
     <Compile Include="gui_wrapper_gpu.py" />
+    <Compile Include="improved_gui_wrapper.py" />
     <Compile Include="stock_predictor\advanced_forecaster.py" />
     <Compile Include="stock_predictor\config.py" />
+    <Compile Include="stock_predictor\config_utils.py" />
+    <Compile Include="stock_predictor\dataset_factory.py" />
     <Compile Include="stock_predictor\data_classes.py" />
     <Compile Include="stock_predictor\data_handler.py" />
+    <Compile Include="stock_predictor\error_handler.py" />
     <Compile Include="stock_predictor\feature_engineering.py" />
     <Compile Include="stock_predictor\forecaster.py" />
     <Compile Include="gui_wrapper.py" />
@@ -59,6 +62,8 @@
     <Compile Include="stock_predictor\gui\preferences_tab.py" />
     <Compile Include="stock_predictor\gui\rolling_window_tab.py" />
     <Compile Include="stock_predictor\gui\strategy_tab.py" />
+    <Compile Include="stock_predictor\model_factory.py" />
+    <Compile Include="stock_predictor\tab_synchronizer.py" />
     <Compile Include="stock_predictor\thread_safe_gui.py" />
     <Compile Include="stock_predictor\gui\__init__.py" />
     <Compile Include="stock_predictor\model.py" />
@@ -67,6 +72,7 @@
     <Compile Include="stock_predictor\rolling_window_forecaster.py" />
     <Compile Include="stock_predictor\strategy_gui_integration.py" />
     <Compile Include="stock_predictor\strategy_implementation.py" />
+    <Compile Include="test_log_transformation.py" />
     <Compile Include="validation\visualization.py" />
     <Compile Include="stock_predictor\__init__.py" />
     <Compile Include="validation\__init__.py" />

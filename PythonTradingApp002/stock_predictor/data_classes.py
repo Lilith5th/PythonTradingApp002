@@ -83,20 +83,6 @@ class StockData:
             raise ValueError("Data not ready for training")
         return self.data_scaled.values
     
-    def scale_close_price(self, close_values: np.ndarray) -> np.ndarray:
-        if self.price_scaler is None:
-            raise ValueError("Price scaler not initialized")
-        if len(close_values.shape) == 1:
-            close_values = close_values.reshape(-1, 1)
-        return self.price_scaler.transform(close_values).flatten()
-    
-    def unscale_close_price(self, scaled_values: np.ndarray) -> np.ndarray:
-        if self.price_scaler is None:
-            raise ValueError("Price scaler not initialized")
-        if len(scaled_values.shape) == 1:
-            scaled_values = scaled_values.reshape(-1, 1)
-        return self.price_scaler.inverse_transform(scaled_values).flatten()
-    
     def load_from_csv(self, parse_dates=None):
         if parse_dates is None:
             parse_dates = ['datetime']
@@ -140,14 +126,42 @@ class StockData:
         """
         if self.csv_data_train_period is None:
             raise ValueError("No training data. Call split_by_dates() first.")
-        
+    
         try:
             logging.info("Starting feature engineering process")
             df = self.csv_data_train_period.copy()
+        
+            # Check if logarithmic transformation is enabled
+            use_log_transform = False
+            if hasattr(self.app_config, 'learning') and hasattr(self.app_config.learning, 'use_log_transformation'):
+                use_log_transform = self.app_config.learning.use_log_transformation
+        
+            # Apply logarithmic transformation if enabled
+            if use_log_transform:
+                logging.info("Applying logarithmic transformation to price data")
+                # Store original close values for later reference
+                df['original_close'] = df['close'].copy()
+                # Apply log transformation to OHLC price data
+                for col in ['open', 'high', 'low', 'close']:
+                    # Ensure all values are positive (add a small epsilon if needed)
+                    min_val = df[col].min()
+                    if min_val <= 0:
+                        epsilon = abs(min_val) + 0.01
+                        logging.warning(f"Found non-positive values in {col}. Adding offset of {epsilon}")
+                        df[col] = df[col] + epsilon
+                
+                    # Apply natural logarithm
+                    df[col] = np.log(df[col])
+                    logging.info(f"Applied logarithmic transformation to {col}")
             
+                # Add a flag to track that log transformation was applied
+                self.log_transformed = True
+            else:
+                self.log_transformed = False
+        
             # Always add some basic features
             df['previous_close'] = df['close'].shift(1)
-            
+        
             # Apply volume scaling
             method = self.volume_scaling_method
             if method == "minmax":
@@ -159,12 +173,12 @@ class StockData:
             else:
                 logging.warning(f"Invalid volume_scaling_method '{method}'. Using 'minmax'.")
                 df['volume_scaled'] = (df['volume'] - df['volume'].min()) / (df['volume'].max() - df['volume'].min())
-            
+        
             # Make a clear decision about using advanced features
             use_advanced_features = False
             if hasattr(self.app_config, 'learning') and hasattr(self.app_config.learning, 'use_features'):
                 use_advanced_features = self.app_config.learning.use_features
-            
+        
             if use_advanced_features:
                 try:
                     from .feature_engineering import FeatureEngineer
@@ -187,21 +201,45 @@ class StockData:
             else:
                 logging.info("Advanced feature engineering disabled; using basic CSV data without extra features")
                 self.data_with_features = df
-            
+        
             # Drop NaN values
             original_len = len(self.data_with_features)
             self.data_with_features = self.data_with_features.dropna()
             dropped = original_len - len(self.data_with_features)
             if dropped > 0:
                 logging.info(f"Dropped {dropped} rows due to NaN values")
-            
+        
             logging.info(f"Feature engineering completed. Data shape: {self.data_with_features.shape}")
             return self
-            
+        
         except Exception as e:
             logging.error(f"Error in feature engineering: {str(e)}")
             logging.error(traceback.format_exc())
             raise ValueError(f"Feature engineering failed: {str(e)}")
+
+    def scale_close_price(self, close_values: np.ndarray) -> np.ndarray:
+        """Scale close price values using the fitted scaler."""
+        if self.price_scaler is None:
+            raise ValueError("Price scaler not initialized")
+        if len(close_values.shape) == 1:
+            close_values = close_values.reshape(-1, 1)
+        return self.price_scaler.transform(close_values).flatten()
+
+    def unscale_close_price(self, scaled_values: np.ndarray) -> np.ndarray:
+        """Unscale close price values back to original scale."""
+        if self.price_scaler is None:
+            raise ValueError("Price scaler not initialized")
+        if len(scaled_values.shape) == 1:
+            scaled_values = scaled_values.reshape(-1, 1)
+    
+        # Unscale the values using the price scaler
+        unscaled_values = self.price_scaler.inverse_transform(scaled_values).flatten()
+    
+        # If log transformation was applied, we need to exponentiate
+        if hasattr(self, 'log_transformed') and self.log_transformed:
+            unscaled_values = np.exp(unscaled_values)
+    
+        return unscaled_values
 
     def build_feature_list(self):
         """

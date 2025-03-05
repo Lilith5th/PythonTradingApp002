@@ -57,23 +57,27 @@ class RollingWindowForecaster:
     def run_rolling_validation(self):
         """
         Run the rolling window validation process.
-    
-        Returns:
-            Tuple: (final_predictions, [diagnostics], feature_importance)
         """
         import numpy as np
         import tensorflow as tf
         import logging
         import traceback
-    
+
         logging.info("Starting rolling window validation")
-    
+
+        # Check if logarithmic transformation is enabled
+        log_transform_enabled = False
+        if hasattr(self.app_config.learning, 'use_log_transformation'):
+            log_transform_enabled = self.app_config.learning.use_log_transformation
+            if log_transform_enabled:
+                logging.info("Running rolling window validation with logarithmic price transformation enabled")
+
         # Get the full training data
         train_data = self.stock_data.get_training_array()
         features = self.stock_data.feature_list
         logging.info(f"Total training samples: {len(train_data)}")
         logging.info(f"Using features (count={len(features)}): {features}")
-    
+
         # Ensure we have enough data
         if len(train_data) < self.min_train_size + self.window_size:
             logging.warning(

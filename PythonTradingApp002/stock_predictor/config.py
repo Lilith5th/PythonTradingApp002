@@ -38,17 +38,19 @@ class PlotConfig:
 @dataclass
 class LearningConfig:
     preset: str = "medium"
-    simulation_size: int = None
-    num_layers: int = None
-    timestamp: int = 100
-    epoch: int = 50  # Default to 50 instead of None
-    dropout_rate: float = None
+    timestamp: int = 60
+    simulation_size: int = 5
+    epoch: int = 50
+    batch_size: int = 32
     auto_batch_size: bool = True
-    manual_batch_size: int = 256
-    learning_rate: float = None
-    l2_reg: float = 0.005
-    early_stopping_patience: int = 10
-    use_features: bool = False  # Flag to toggle feature panel settings
+    manual_batch_size: int = 32
+    num_layers: int = 2
+    size_layer: int = 64
+    dropout_rate: float = 0.2
+    learning_rate: float = 0.001
+    l2_reg: float = 0.01
+    use_features: bool = False
+    use_log_transformation: bool = False  # New field for logarithmic transformation
     
     def __post_init__(self):
         presets = {
