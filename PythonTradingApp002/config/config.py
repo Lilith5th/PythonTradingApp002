@@ -1,7 +1,7 @@
 #config.py
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict, Any
 
 @dataclass
 class CSVConfig:
@@ -45,7 +45,7 @@ class LearningConfig:
     auto_batch_size: bool = True
     manual_batch_size: int = 32
     num_layers: int = 2
-    size_layer: int = 64
+    size_layer: int = 10  # Changed from 64 to meet the max requirement
     dropout_rate: float = 0.2
     learning_rate: float = 0.001
     l2_reg: float = 0.01
@@ -202,6 +202,66 @@ class StrategyConfig:
     backtest_period: int = 252           # Number of days to backtest (approximately 1 year)
     optimization_metric: str = "sharpe_ratio"  # Metric to optimize for
 
+@dataclass
+class PreferencesConfig:
+    """Configuration for user preferences."""
+    theme: str = "light"               # Application theme (light, dark)
+    auto_save: bool = True             # Auto-save configuration
+    save_interval: int = 5             # Auto-save interval in minutes
+    chart_style: str = "candle"        # Chart style (line, candle, ohlc)
+    decimal_precision: int = 2         # Decimal precision for displayed values
+    date_format: str = "%Y-%m-%d"      # Date format for display
+    log_level: str = "INFO"            # Logging level
+    enable_hardware_acceleration: bool = True  # Enable hardware acceleration if available
+    use_cache: bool = True             # Cache data between sessions
+    cache_expiry: int = 24             # Cache expiry in hours
+    ui_font_size: int = 10             # UI font size
+    chart_font_size: int = 10          # Chart font size
+
+@dataclass
+class RootWidgetsConfig:
+    """Configuration for root-level UI widgets."""
+    main_width: int = 1280             # Main window width
+    main_height: int = 800             # Main window height
+    toolbar_visible: bool = True       # Show toolbar
+    statusbar_visible: bool = True     # Show status bar
+    sidebar_visible: bool = True       # Show sidebar
+    sidebar_width: int = 250           # Sidebar width
+    tab_position: str = "top"          # Tab position (top, bottom, left, right)
+    enable_animations: bool = True     # Enable UI animations
+    show_splash_screen: bool = True    # Show splash screen on startup
+    confirm_exit: bool = True          # Confirm before exiting
+
+@dataclass
+class FeaturesConfig:
+    """Configuration for features tab."""
+    selected_features: List[str] = field(default_factory=lambda: ["macd", "rsi"])
+    feature_categories: Dict[str, bool] = field(default_factory=lambda: {
+        "price": True,
+        "volume": True,
+        "momentum": True,
+        "volatility": True,
+        "trend": True
+    })
+    custom_features: List[Dict[str, Any]] = field(default_factory=list)  # Custom feature definitions
+    feature_scaling: str = "standard"  # Feature scaling method (standard, minmax, robust)
+    enable_pca: bool = False          # Enable PCA dimensionality reduction
+    pca_components: int = 5           # Number of PCA components
+    enable_feature_engineering: bool = True  # Enable automatic feature engineering
+    lag_periods: List[int] = field(default_factory=lambda: [1, 5, 10, 20])  # Lag periods for features
+
+@dataclass
+class AdvancedPredictionConfig:
+    """Advanced prediction settings."""
+    # Extending the existing PredictionAdvancedConfig with additional UI-specific settings
+    show_ensemble_details: bool = True  # Show detailed ensemble model information
+    plot_individual_models: bool = False  # Plot predictions from individual ensemble models
+    uncertainty_alpha: float = 0.2  # Alpha value for uncertainty bands
+    monte_carlo_alpha: float = 0.1  # Alpha value for monte carlo simulation bands
+    color_scheme: str = "default"  # Color scheme for plots
+    show_metrics_on_plot: bool = True  # Show performance metrics on plot
+    export_predictions: bool = False  # Export predictions to CSV
+    export_path: str = "./predictions/"  # Path for exported predictions
 
 @dataclass
 class AppConfig:
@@ -214,5 +274,10 @@ class AppConfig:
     prediction_advanced: PredictionAdvancedConfig = field(default_factory=PredictionAdvancedConfig)
     tf_config: TensorFlowConfig = field(default_factory=TensorFlowConfig)
     feature_selection: FeatureSelectionConfig = field(default_factory=FeatureSelectionConfig)
-    rolling_window: RollingWindowConfig = field(default_factory=RollingWindowConfig)  # New rolling window config
+    rolling_window: RollingWindowConfig = field(default_factory=RollingWindowConfig)
     strategy: StrategyConfig = field(default_factory=StrategyConfig)
+    # Adding the missing sections
+    preferences: PreferencesConfig = field(default_factory=PreferencesConfig)
+    root_widgets: RootWidgetsConfig = field(default_factory=RootWidgetsConfig)
+    features: FeaturesConfig = field(default_factory=FeaturesConfig)
+    advanced_prediction: AdvancedPredictionConfig = field(default_factory=AdvancedPredictionConfig)

@@ -13,26 +13,29 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from stock_predictor import plot_gui
-from stock_predictor.data_classes import StockData, ForecastResults
-from stock_predictor.config import AppConfig
+from gui import plot_gui
+from core.data_classes import StockData, ForecastResults
+from config.config import (
+    AppConfig, RootWidgetsConfig, PreferencesConfig, 
+    FeaturesConfig, AdvancedPredictionConfig
+)
 
 # Import necessary modules for GUI tabs
-from stock_predictor.gui import (
+from gui.tabs import (
     preferences_tab, learning_tab, prediction_tab,
     plot_tab, features_tab, rolling_window_tab, 
     advanced_prediction_tab, strategy_tab
 )
 
 # Import utility modules
-from stock_predictor.config_utils import update_config_from_gui, validate_config
-from stock_predictor.tab_synchronizer import SynchronizedTabManager
-from stock_predictor.error_handler import (
+from config.config_utils import update_config_from_gui, validate_config
+from gui.tab_synchronizer import SynchronizedTabManager
+from utils.error_handler import (
     get_error_handler, handle_errors, catch_and_log_errors, 
     ErrorAwareThread, validate_gpu_availability
 )
 from stock_predictor.dataset_factory import DatasetFactory
-from stock_predictor.model_factory import ModelFactory
+from core.model_factory import ModelFactory
 
 matplotlib.use('TkAgg')
 
@@ -404,6 +407,28 @@ def create_gui(app_config):
     Args:
         app_config: Application configuration
     """
+    # First, ensure all required config sections exist
+    if not hasattr(app_config, 'root_widgets'):
+        from config.config import RootWidgetsConfig
+        app_config.root_widgets = RootWidgetsConfig()
+    
+    if not hasattr(app_config, 'preferences'):
+        from config.config import PreferencesConfig
+        app_config.preferences = PreferencesConfig()
+    
+    if not hasattr(app_config, 'features'):
+        from config.config import FeaturesConfig
+        app_config.features = FeaturesConfig()
+    
+    if not hasattr(app_config, 'advanced_prediction'):
+        from config.config import AdvancedPredictionConfig
+        app_config.advanced_prediction = AdvancedPredictionConfig()
+    
+    # Make sure learning.size_layer is within valid range
+    if app_config.learning.size_layer > 10:
+        app_config.learning.size_layer = 10
+        logging.warning("learning.size_layer adjusted to maximum value of 10")
+    
     # Initialize root window
     root = tk.Tk()
     root.title("Dynamic Forecast Configuration (GPU)")
@@ -413,7 +438,7 @@ def create_gui(app_config):
     error_handler = get_error_handler(root)
     
     # Create data handler instance
-    from stock_predictor.data_handler import DataHandler
+    from core.data_handler import DataHandler
     data_handler = DataHandler(app_config)
     
     # Configure grid layout
@@ -428,7 +453,7 @@ def create_gui(app_config):
     notebook.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
     
     # Create frames in desired order
-    tab_manager.add_tab("preferences", preferences_tab, app_config.learning_pref)
+    tab_manager.add_tab("preferences", preferences_tab, app_config.preferences)  # Fixed: using preferences instead of learning_pref
     tab_manager.add_tab("learning", learning_tab, app_config.learning)
     tab_manager.add_tab("features", features_tab, app_config.feature_selection)
     tab_manager.add_tab("rolling_window", rolling_window_tab, app_config.rolling_window)
@@ -534,6 +559,9 @@ def create_gui(app_config):
     # Set up close handler
     root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root))
     
+    # Store button_frame for later reference
+    root.button_frame = button_frame
+    
     # Store important references
     root.btn_run = btn_run
     root.btn_parallel = btn_parallel
@@ -541,6 +569,7 @@ def create_gui(app_config):
     root.status_var = status_var
     root.tab_manager = tab_manager
     root.data_handler = data_handler
+    root.app_config = app_config  # Store app_config reference
     
     # Start the main loop
     root.mainloop()
@@ -780,8 +809,7 @@ def run_model_comparison(app_config, tab_manager, data_handler):
         messagebox.showerror("Configuration Error", 
                             f"Configuration errors: {', '.join(errors)}")
         return
-    
-    # Get references
+# Get references
     root = tab_manager.root
     status_var = root.status_var
     
@@ -1123,7 +1151,26 @@ def main():
         from stock_predictor import forecast_module
         
         # Create application configuration
-        app_config = forecast_module.AppConfig()
+        app_config = AppConfig()  # Using the direct import from config instead
+        
+        # Initialize all required sections
+        # Already initialized in constructor, but just to be safe:
+        if not hasattr(app_config, 'root_widgets'):
+            app_config.root_widgets = RootWidgetsConfig()
+        
+        if not hasattr(app_config, 'preferences'):
+            app_config.preferences = PreferencesConfig()
+        
+        if not hasattr(app_config, 'features'):
+            app_config.features = FeaturesConfig()
+        
+        if not hasattr(app_config, 'advanced_prediction'):
+            app_config.advanced_prediction = AdvancedPredictionConfig()
+        
+        # Ensure size_layer is valid
+        if app_config.learning.size_layer > 10:
+            app_config.learning.size_layer = 10
+            logging.warning("learning.size_layer adjusted to maximum value of 10")
         
         # Create GUI
         create_gui(app_config)

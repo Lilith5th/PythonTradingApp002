@@ -13,7 +13,7 @@ import logging
 import time
 import traceback
 
-from stock_predictor.data_classes import ForecastResults
+from core.data_classes import ForecastResults
 from stock_predictor.model import BidirectionalForecastModel
 
 class RollingWindowForecaster:

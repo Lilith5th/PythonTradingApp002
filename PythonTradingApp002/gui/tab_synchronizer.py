@@ -13,7 +13,11 @@ Synchronized parameters include:
 import tkinter as tk
 from tkinter import ttk
 import logging
+import inspect
 from typing import Dict, Any, Callable
+
+# Update the import path to use the full module path
+from config.config_utils import update_config_from_gui, update_gui_from_config
 
 
 class TabSynchronizer:
@@ -318,8 +322,13 @@ class SynchronizedTabManager:
         tab_title = " ".join(word.capitalize() for word in name.split("_"))
         self.notebook.add(frame, text=tab_title)
         
-        # Create the tab content
-        tab_entries = tab_module.create_tab(frame, config_obj, self.app_config)
+        # Check if create_tab accepts 2 or 3+ parameters
+        sig = inspect.signature(tab_module.create_tab)
+        if len(sig.parameters) == 2:
+            tab_entries = tab_module.create_tab(frame, config_obj)
+        else:
+            tab_entries = tab_module.create_tab(frame, config_obj, self.app_config)
+        
         self.entries[name] = tab_entries
         self.tabs[name] = frame
         
@@ -340,16 +349,12 @@ class SynchronizedTabManager:
         Returns:
             Tuple[bool, List[str]]: Success flag and list of errors
         """
-        from config_utils import update_config_from_gui
-        
-        # Update configuration with validation
+        # Use the imported function from utils.config_utils
         return update_config_from_gui(self.entries, self.app_config, validate)
     
     def update_gui_from_config(self):
         """Update GUI from configuration"""
-        from config_utils import update_gui_from_config
-        
-        # Update GUI with suspension of callbacks
+        # Use the imported function from utils.config_utils
         self.synchronizer.with_callbacks_suspended(
             lambda: update_gui_from_config(self.entries, self.app_config)
         )

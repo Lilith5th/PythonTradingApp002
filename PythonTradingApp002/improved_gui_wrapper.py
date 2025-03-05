@@ -19,14 +19,14 @@ import sys
 import time
 
 # Import configuration and utility modules
-from stock_predictor.config import AppConfig
-from stock_predictor.config_utils import update_config_from_gui, validate_config
-from stock_predictor.tab_synchronizer import SynchronizedTabManager
-from stock_predictor.error_handler import get_error_handler, ErrorAwareThread, catch_and_log_errors
-from stock_predictor.data_handler import DataHandler
+from config.config import AppConfig
+from config.config_utils import update_config_from_gui, validate_config
+from gui.tab_synchronizer import SynchronizedTabManager
+from utils.error_handler import get_error_handler, ErrorAwareThread, catch_and_log_errors
+from  core.data_handler import DataHandler
 
 # Import GUI tab modules
-from stock_predictor.gui import (
+from gui.tabs import (
     preferences_tab, learning_tab, prediction_tab, plot_tab, 
     features_tab, rolling_window_tab, advanced_prediction_tab, strategy_tab
 )

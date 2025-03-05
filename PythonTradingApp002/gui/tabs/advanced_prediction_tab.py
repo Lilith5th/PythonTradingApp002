@@ -3,6 +3,7 @@ Advanced Prediction tab for the Dynamic Forecast Configuration GUI
 """
 import tkinter as tk
 from tkinter import ttk
+from dataclasses import fields
 
 def create_tab(frame, config_obj):
     """
@@ -146,7 +147,7 @@ def create_tab(frame, config_obj):
             mc_num_var = tk.StringVar(value=str(getattr(config_obj, 'num_monte_carlo_simulations', 1000)))
             mc_num_entry = ttk.Entry(num_frame, textvariable=mc_num_var, width=8)
             mc_num_entry.pack(side="left", padx=5)
-            self.entries['num_monte_carlo_simulations'] = mc_num_entry
+            self.entries['num_monte_carlo_simulations'] = mc_num_var
 
             # Random Seed
             seed_frame = ttk.Frame(mc_frame)
@@ -156,7 +157,7 @@ def create_tab(frame, config_obj):
             mc_seed_var = tk.StringVar(value=str(getattr(config_obj, 'monte_carlo_seed', 42)))
             mc_seed_entry = ttk.Entry(seed_frame, textvariable=mc_seed_var, width=8)
             mc_seed_entry.pack(side="left", padx=5)
-            self.entries['monte_carlo_seed'] = mc_seed_entry
+            self.entries['monte_carlo_seed'] = mc_seed_var
 
             # Market Scenarios
             scenario_frame = ttk.LabelFrame(mc_frame, text="Market Scenarios")
@@ -263,54 +264,66 @@ def create_tab(frame, config_obj):
             dropout_entry.pack(side="left", expand=True, fill="x", padx=5)
             self.entries['dropout_rates'] = dropout_var
 
-    def update_config(entries, config_obj):
-        """
-        Update the advanced prediction configuration object from GUI entries.
-    
-        Args:
-            entries: Dictionary containing the GUI entries for the advanced prediction tab
-            config_obj: The advanced prediction configuration object to update
-        """
-        from dataclasses import fields
-    
-        # Process standard entries (BooleanVar, StringVar, etc.)
-        for f in fields(config_obj):
-            if f.name in entries:
-                value = entries[f.name]
-                current_val = getattr(config_obj, f.name)
+        def update_config(self, config_obj):
+            """
+            Update the advanced prediction configuration object from GUI entries.
+        
+            Args:
+                config_obj: The advanced prediction configuration object to update
+            """
+            # Process standard entries (BooleanVar, StringVar, etc.)
+            for f in fields(config_obj):
+                if f.name in self.entries:
+                    value = self.entries[f.name]
+                    current_val = getattr(config_obj, f.name)
+                
+                    # Handle different widget types
+                    if isinstance(value, tk.BooleanVar):
+                        setattr(config_obj, f.name, value.get())
+                    elif hasattr(value, 'get'):
+                        # Convert to appropriate type based on current value
+                        widget_value = value.get()
+                        if isinstance(current_val, bool):
+                            setattr(config_obj, f.name, str(widget_value).lower() == 'true')
+                        elif isinstance(current_val, int):
+                            setattr(config_obj, f.name, int(widget_value))
+                        elif isinstance(current_val, float):
+                            setattr(config_obj, f.name, float(widget_value))
+                        else:
+                            setattr(config_obj, f.name, widget_value)
+        
+            # Handle special case for monte_carlo_scenarios (dictionary of checkboxes)
+            if 'monte_carlo_scenarios' in self.entries:
+                scenarios = []
+                for scenario, var in self.entries['monte_carlo_scenarios'].items():
+                    if var.get():
+                        scenarios.append(scenario)
+                setattr(config_obj, 'monte_carlo_scenarios', scenarios)
+        
+            # Handle special case for scenario parameters (tuple of entries)
+            if 'scenario_param_widgets' in self.entries:
+                params = {}
+                for scenario, (drift_var, vol_var) in self.entries['scenario_param_widgets'].items():
+                    drift = float(drift_var.get())
+                    vol = float(vol_var.get())
+                    params[scenario] = [drift, vol]
+                setattr(config_obj, 'scenario_parameters', params)
             
-                # Handle different widget types
-                if isinstance(value, tk.BooleanVar):
-                    setattr(config_obj, f.name, value.get())
-                elif hasattr(value, 'get'):
-                    # Convert to appropriate type based on current value
-                    widget_value = value.get()
-                    if isinstance(current_val, bool):
-                        setattr(config_obj, f.name, str(widget_value).lower() == 'true')
-                    elif isinstance(current_val, int):
-                        setattr(config_obj, f.name, int(widget_value))
-                    elif isinstance(current_val, float):
-                        setattr(config_obj, f.name, float(widget_value))
-                    else:
-                        setattr(config_obj, f.name, widget_value)
-    
-        # Handle special case for monte_carlo_scenarios (dictionary of checkboxes)
-        if 'monte_carlo_scenarios' in entries:
-            scenarios = []
-            for scenario, var in entries['monte_carlo_scenarios'].items():
-                if var.get():
-                    scenarios.append(scenario)
-            setattr(config_obj, 'monte_carlo_scenarios', scenarios)
-    
-        # Handle special case for scenario parameters (tuple of entries)
-        if 'scenario_param_widgets' in entries:
-            params = {}
-            for scenario, (drift_var, vol_var) in entries['scenario_param_widgets'].items():
-                drift = float(drift_var.get())
-                vol = float(vol_var.get())
-                params[scenario] = [drift, vol]
-            setattr(config_obj, 'scenario_parameters', params)
-
+            # Handle special case for model_vars (dictionary of checkboxes)
+            if 'model_vars' in self.entries:
+                ensemble_models = []
+                for model, var in self.entries['model_vars'].items():
+                    if var.get():
+                        ensemble_models.append(model)
+                setattr(config_obj, 'ensemble_models', ensemble_models)
+            
+            # Handle special case for metric_vars (dictionary of checkboxes)
+            if 'metric_vars' in self.entries:
+                validation_metrics = []
+                for metric, var in self.entries['metric_vars'].items():
+                    if var.get():
+                        validation_metrics.append(metric)
+                setattr(config_obj, 'validation_metrics', validation_metrics)
 
     # Return an instance of the class
     return AdvancedPredictionTab()

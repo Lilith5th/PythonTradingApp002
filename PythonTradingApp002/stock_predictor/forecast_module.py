@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import multiprocessing
 import time
-from .config import AppConfig, LearningConfig
-from .data_handler import DataHandler
-from .forecaster import Forecaster
+from config.config import AppConfig, LearningConfig
+from core.data_handler import DataHandler
+from core.forecaster import Forecaster
 from .plotter import Plotter
-from .rolling_window_forecaster import RollingWindowForecaster
+from advanced.rolling_window_forecaster import RollingWindowForecaster
 
 LearningConfig = LearningConfig
 
